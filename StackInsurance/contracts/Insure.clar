@@ -16,15 +16,6 @@
   { insured-party: principal }
   { claim-requested: uint, claim-approved: bool })
 
-;; Event emitters for transparency
-(begin
-  (define-event insurance-policy-created (policy-holder principal premium uint coverage uint))
-  (define-event premium-paid (policy-holder principal amount uint expiration uint))
-  (define-event claim-filed (policy-holder principal claim-amount uint))
-  (define-event claim-approved (policy-holder principal claim-amount uint))
-  (define-event payout-released (policy-holder principal payout-amount uint))
-)
-
 ;; Helper function: Get the current block height
 (define-read-only (get-block-height) (ok (as-max-len u100000)))
 
@@ -40,7 +31,8 @@
             { policy-premium: premium-amount, policy-coverage: coverage-amount, total-claims: u0, policy-expiration: 0, policy-active: false })
           (var-set insurer new-insurer)
           (var-set insured-party new-insured-party)
-          (emit-event (insurance-policy-created new-insured-party premium-amount coverage-amount))
+          ;; Logging event (using print)
+          (print {event: "insurance-policy-created", insured-party: new-insured-party, premium: premium-amount, coverage: coverage-amount})
           (ok (some "Policy initiated successfully")))
         (err "An active policy already exists for this insured party")))))
 
@@ -66,7 +58,8 @@
                   total-claims: (get total-claims active-policy),
                   policy-expiration: (+ current-height 52595), ;; 52595 blocks ~ 1 year
                   policy-active: true })
-              (emit-event (premium-paid insured (get policy-premium active-policy) (+ current-height 52595)))
+              ;; Logging event (using print)
+              (print {event: "premium-paid", insured-party: insured, premium: (get policy-premium active-policy), expiration: (+ current-height 52595)})
               (ok "Premium submitted and policy renewed successfully"))
             (err "Policy is expired and cannot be renewed"))
         )
@@ -85,7 +78,8 @@
                    (>= (get policy-coverage active-policy) (+ (get total-claims active-policy) claim-amount)))
             (begin
               (map-set insurance-claims { insured-party: insured } { claim-requested: claim-amount, claim-approved: false })
-              (emit-event (claim-filed insured claim-amount))
+              ;; Logging event (using print)
+              (print {event: "claim-filed", insured-party: insured, claim-amount: claim-amount})
               (ok "Claim submitted successfully"))
             (err "Claim exceeds coverage or policy is inactive"))
         )
@@ -100,7 +94,8 @@
       (some filed-claim)
         (begin
           (map-set insurance-claims { insured-party: insured } { claim-requested: (get claim-requested filed-claim), claim-approved: true })
-          (emit-event (claim-approved insured (get claim-requested filed-claim)))
+          ;; Logging event (using print)
+          (print {event: "claim-approved", insured-party: insured, claim-amount: (get claim-requested filed-claim)})
           (ok "Claim approved"))
       (none (err "Claim not found")))))
 
@@ -125,7 +120,8 @@
                   policy-active: (get policy-active policy-data) })
               ;; Transfer STX to insured as payout
               (stx-transfer? (get claim-requested approved-claim) (var-get insurer) insured)
-              (emit-event (payout-released insured (get claim-requested approved-claim)))
+              ;; Logging event (using print)
+              (print {event: "payout-released", insured-party: insured, payout-amount: (get claim-requested approved-claim)})
               (ok "Payout released successfully"))
             (err "Claim not yet approved"))
         )
