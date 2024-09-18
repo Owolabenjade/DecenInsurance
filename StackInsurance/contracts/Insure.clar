@@ -59,7 +59,7 @@
                   (<= (get policy-expiration active-policy) (+ current-height grace-period)))
               (begin
                 ;; Transfer premium amount to the insurer
-                (unwrap! (stx-transfer? (get policy-premium active-policy) tx-sender (get insurer active-policy)) "Transfer failed")
+                (unwrap! (stx-transfer? (get policy-premium active-policy) tx-sender (get insurer active-policy)) (err "Transfer failed"))
                 ;; Update the policy to active and set new expiration
                 (map-set insurance-policies
                   { insured-party: insured }
@@ -133,7 +133,7 @@
                         { insured-party: insured }
                         (merge policy { total-claims: new-total-claims }))
                       ;; Transfer payout amount to the insured
-                      (unwrap! (stx-transfer? (get claim-requested approved-claim) (get insurer policy) insured) "Transfer failed")
+                      (unwrap! (stx-transfer? (get claim-requested approved-claim) (get insurer policy) insured) (err "Transfer failed"))
                       ;; Log the event
                       (print {event: "payout-released",
                               insured-party: insured,
