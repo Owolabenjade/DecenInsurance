@@ -103,24 +103,24 @@
             (policy (unwrap! policy-data (err "Policy unwrap failed")))
           )
           (if (is-eq (get claim-approved approved-claim) true)
-              (begin
-                ;; Ensure total claims do not exceed policy coverage
-                (let ((new-total-claims (+ (get total-claims policy) (get claim-requested approved-claim))))
-                  (if (<= new-total-claims (get policy-coverage policy))
-                      (begin
-                        ;; Update the policy's total claims
-                        (map-set insurance-policies
-                          { insured-party: insured }
-                          { policy-premium: (get policy-premium policy),
-                            policy-coverage: (get policy-coverage policy),
-                            total-claims: new-total-claims,
-                            policy-expiration: (get policy-expiration policy),
-                            policy-active: (get policy-active policy) })
-                        ;; Transfer STX to insured as payout
-                        (try! (stx-transfer? (get claim-requested approved-claim) (var-get insurer) insured))
-                        ;; Logging event (using print)
-                        (print {event: "payout-released", insured-party: insured, payout-amount: (get claim-requested approved-claim)})
-                        (ok "Payout released successfully"))
-                      (err "Payout exceeds policy coverage")))
+              (let (
+                  (new-total-claims (+ (get total-claims policy) (get claim-requested approved-claim)))
+                )
+                (if (<= new-total-claims (get policy-coverage policy))
+                    (begin
+                      ;; Update the policy's total claims
+                      (map-set insurance-policies
+                        { insured-party: insured }
+                        { policy-premium: (get policy-premium policy),
+                          policy-coverage: (get policy-coverage policy),
+                          total-claims: new-total-claims,
+                          policy-expiration: (get policy-expiration policy),
+                          policy-active: (get policy-active policy) })
+                      ;; Transfer STX to insured as payout
+                      (try! (stx-transfer? (get claim-requested approved-claim) (var-get insurer) insured))
+                      ;; Logging event (using print)
+                      (print {event: "payout-released", insured-party: insured, payout-amount: (get claim-requested approved-claim)})
+                      (ok "Payout released successfully"))
+                    (err "Payout exceeds policy coverage")))
               (err "Claim not yet approved")))
         (err "Claim or Policy not found"))))
